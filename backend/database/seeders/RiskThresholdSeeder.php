@@ -1,24 +1,51 @@
 <?php
 
-namespace App\Models;
+namespace Database\Seeders;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\RiskThreshold;
+use Illuminate\Database\Seeder;
 
-class RiskThreshold extends Model
+class RiskThresholdSeeder extends Seeder
 {
-    protected $fillable = [
-        'parameter',
-        'low_threshold',
-        'medium_threshold',
-        'high_threshold',
-        'condition',
-        'is_active',
-    ];
+    public function run(): void
+    {
+        $thresholds = [
+            [
+                'parameter' => 'temperature',
+                'low_threshold' => 25.0,
+                'medium_threshold' => 30.0,
+                'high_threshold' => 35.0,
+                'condition' => 'greater_than',
+                'is_active' => true,
+            ],
+            [
+                'parameter' => 'wind_speed',
+                'low_threshold' => 10.0,
+                'medium_threshold' => 20.0,
+                'high_threshold' => 40.0,
+                'condition' => 'greater_than',
+                'is_active' => true,
+            ],
+            [
+                'parameter' => 'humidity',
+                'low_threshold' => 80.0,
+                'medium_threshold' => 90.0,
+                'high_threshold' => 95.0,
+                'condition' => 'greater_than',
+                'is_active' => true,
+            ],
+            [
+                'parameter' => 'cloud_cover',
+                'low_threshold' => 50.0,
+                'medium_threshold' => 70.0,
+                'high_threshold' => 90.0,
+                'condition' => 'greater_than',
+                'is_active' => true,
+            ],
+        ];
 
-    protected $casts = [
-        'low_threshold' => 'decimal:2',
-        'medium_threshold' => 'decimal:2',
-        'high_threshold' => 'decimal:2',
-        'is_active' => 'boolean',
-    ];
+        foreach ($thresholds as $threshold) {
+            RiskThreshold::create($threshold);
+        }
+    }
 }
