@@ -5,6 +5,20 @@ import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip } from 'react-lea
 import { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+// Fix Leaflet default icon issue
+import L from 'leaflet';
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+  iconUrl: icon.src,
+  shadowUrl: iconShadow.src,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
 interface CityWeather {
   id: number;
   name: string;
@@ -21,16 +35,21 @@ interface WeatherMapProps {
 
 const getRiskColor = (riskLevel: string): string => {
   switch (riskLevel) {
-    case 'extreme': return '#DC2626';
-    case 'high': return '#EA580C';
-    case 'medium': return '#F59E0B';
-    case 'low': return '#10B981';
-    default: return '#6B7280';
+    case 'extreme':
+      return '#DC2626'; // red-600
+    case 'high':
+      return '#EA580C'; // orange-600
+    case 'medium':
+      return '#F59E0B'; // yellow-500
+    case 'low':
+      return '#10B981'; // green-500
+    default:
+      return '#6B7280'; // gray-500
   }
 };
 
 export default function WeatherMap({ cities, onCitySelect }: WeatherMapProps) {
-  const center: LatLngExpression = [-2.5, 118];
+  const center: LatLngExpression = [-2.5, 118]; // Indonesia center
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -57,6 +76,7 @@ export default function WeatherMap({ cities, onCitySelect }: WeatherMapProps) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        
         {cities.map((city) => (
           <CircleMarker
             key={city.id}
