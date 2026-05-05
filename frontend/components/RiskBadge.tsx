@@ -1,58 +1,70 @@
 import { cn } from '@/lib/utils';
 
+export type RiskLevel = 'low' | 'medium' | 'high' | 'extreme';
+
 interface RiskBadgeProps {
-  level: 'low' | 'medium' | 'high' | 'extreme';
+  level: RiskLevel | string;
   score?: number;
   className?: string;
+  compact?: boolean;
 }
 
-const riskConfig = {
+const riskConfig: Record<RiskLevel, { bg: string; text: string; border: string; icon: string; label: string }> = {
   low: {
-    bg: 'bg-green-100',
-    text: 'text-green-800',
-    border: 'border-green-300',
+    bg: 'bg-emerald-500/10 dark:bg-emerald-500/20',
+    text: 'text-emerald-700 dark:text-emerald-400',
+    border: 'border-emerald-300 dark:border-emerald-700',
     icon: '🟢',
-    label: 'Low Risk',
+    label: 'Rendah',
   },
   medium: {
-    bg: 'bg-yellow-100',
-    text: 'text-yellow-800',
-    border: 'border-yellow-300',
+    bg: 'bg-yellow-500/10 dark:bg-yellow-500/20',
+    text: 'text-yellow-700 dark:text-yellow-400',
+    border: 'border-yellow-300 dark:border-yellow-700',
     icon: '🟡',
-    label: 'Medium Risk',
+    label: 'Sedang',
   },
   high: {
-    bg: 'bg-orange-100',
-    text: 'text-orange-800',
-    border: 'border-orange-300',
+    bg: 'bg-orange-500/10 dark:bg-orange-500/20',
+    text: 'text-orange-700 dark:text-orange-400',
+    border: 'border-orange-300 dark:border-orange-700',
     icon: '🟠',
-    label: 'High Risk',
+    label: 'Tinggi',
   },
   extreme: {
-    bg: 'bg-red-100',
-    text: 'text-red-800',
-    border: 'border-red-300',
+    bg: 'bg-red-500/10 dark:bg-red-500/20',
+    text: 'text-red-700 dark:text-red-400',
+    border: 'border-red-300 dark:border-red-700',
     icon: '🔴',
-    label: 'Extreme Risk',
+    label: 'Ekstrem',
   },
 };
 
-export default function RiskBadge({ level, score, className }: RiskBadgeProps) {
-  const config = riskConfig[level];
+export default function RiskBadge({ level, score, className, compact = false }: RiskBadgeProps) {
+  const safeLevel = (['low', 'medium', 'high', 'extreme'].includes(level as string) ? level : 'low') as RiskLevel;
+  const config = riskConfig[safeLevel];
+
+  if (compact) {
+    return (
+      <span className={cn(
+        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-semibold',
+        config.bg, config.text, config.border, className
+      )}>
+        {config.icon} {config.label}
+      </span>
+    );
+  }
 
   return (
     <div className={cn(
-      'inline-flex items-center gap-2 px-4 py-2 rounded-full border',
-      config.bg, config.text, config.border,
-      className
+      'inline-flex items-center gap-3 px-4 py-2.5 rounded-xl border',
+      config.bg, config.text, config.border, className
     )}>
-      <span className="text-xl">{config.icon}</span>
+      <span className="text-2xl leading-none">{config.icon}</span>
       <div>
-        <div className="font-semibold">{config.label}</div>
+        <div className="font-bold text-sm leading-none">Risiko {config.label}</div>
         {score !== undefined && (
-          <div className="text-xs opacity-75">
-            Score: {score.toFixed(2)}
-          </div>
+          <div className="text-xs opacity-70 mt-0.5">Skor: {Number(score).toFixed(2)}</div>
         )}
       </div>
     </div>

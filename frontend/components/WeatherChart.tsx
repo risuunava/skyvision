@@ -1,14 +1,8 @@
 'use client';
 
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import { WeatherHistory, Prediction } from '@/types/weather';
 import { format } from 'date-fns';
@@ -20,112 +14,65 @@ interface WeatherChartProps {
 }
 
 const dataTypeConfig = {
-  temperature: {
-    label: 'Temperature',
-    unit: '°C',
-    color: '#EF4444',
-    range: [15, 40] as [number, number],
-  },
-  humidity: {
-    label: 'Humidity',
-    unit: '%',
-    color: '#3B82F6',
-    range: [0, 100] as [number, number],
-  },
-  wind_speed: {
-    label: 'Wind Speed',
-    unit: 'km/h',
-    color: '#10B981',
-    range: [0, 60] as [number, number],
-  },
-  cloud_cover: {
-    label: 'Cloud Cover',
-    unit: '%',
-    color: '#8B5CF6',
-    range: [0, 100] as [number, number],
-  },
+  temperature: { label: 'Suhu',      unit: '°C',   color: '#EF4444', domain: [15, 42] as [number,number] },
+  humidity:    { label: 'Kelembaban', unit: '%',    color: '#3B82F6', domain: [30, 100] as [number,number] },
+  wind_speed:  { label: 'Angin',      unit: 'km/h', color: '#10B981', domain: [0, 70] as [number,number] },
+  cloud_cover: { label: 'Awan',       unit: '%',    color: '#8B5CF6', domain: [0, 100] as [number,number] },
 };
 
 export default function WeatherChart({ history, predictions, dataType }: WeatherChartProps) {
   const config = dataTypeConfig[dataType];
 
   const chartData = [
-    ...history.map((h) => ({
-      timestamp: format(new Date(h.timestamp), 'HH:mm'),
-      actual: h[dataType],
-      predicted: null,
-      type: 'Historical',
+    ...history.slice(-24).map(h => ({
+      time:      format(new Date(h.timestamp), 'HH:mm'),
+      actual:    h[dataType] as number,
+      predicted: null as number | null,
+      type: 'hist',
     })),
-    ...predictions.map((p) => ({
-      timestamp: format(new Date(p.timestamp), 'HH:mm'),
-      actual: null,
-      predicted: p[dataType],
-      type: 'Predicted',
-      confidence: p.confidence,
+    ...predictions.slice(0, 24).map(p => ({
+      time:      format(new Date(p.timestamp), 'HH:mm'),
+      actual:    null as number | null,
+      predicted: p[dataType] as number,
+      type: 'pred',
     })),
   ];
 
+  // Mark where history ends
+  const splitIdx = history.slice(-24).length;
+
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number | null; color: string; payload: { type: string } }>; label?: string }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="glass rounded-lg px-3 py-2 text-xs shadow-lg border border-border/50">
+        <p className="font-semibold mb-1">{label}</p>
+        {payload.map((entry, i) =>
+          entry.value !== null ? (
+            <p key={i} style={{ color: entry.color }}>
+              {entry.name}: {typeof entry.value === 'number' ? entry.value.toFixed(1) : entry.value} {config.unit}
+            </p>
+          ) : null
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
-      <h3 className="text-lg font-semibold mb-4">{config.label} Over Time</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis 
-            dataKey="timestamp" 
-            label={{ value: 'Time', position: 'insideBottom', offset: -5 }}
-          />
-          <YAxis 
-            domain={config.range}
-            label={{ 
-              value: `${config.label} (${config.unit})`, 
-              angle: -90, 
-              position: 'insideLeft' 
-            }}
-          />
-          <Tooltip 
-            content={({ active, payload, label }) => {
-              if (active && payload && payload.length) {
-                return (
-                  <div className="bg-white border p-2 rounded shadow-lg">
-                    <p className="text-sm font-medium">Time: {label}</p>
-                    {payload.map((entry, index) => (
-                      <p key={index} className="text-sm" style={{ color: entry.color }}>
-                        {entry.name}: {entry.value?.toFixed(2)} {config.unit}
-                        {entry.payload.confidence && (
-                          <span className="text-xs ml-2">
-                            ({entry.payload.confidence * 100}% confidence)
-                          </span>
-                        )}
-                      </p>
-                    ))}
-                  </div>
-                );
-              }
-              return null;
-            }}
-          />
-          <Legend />
-          <Line
-            type="monotone"
-            dataKey="actual"
-            stroke={config.color}
-            strokeWidth={2}
-            dot={{ r: 3 }}
-            name="Actual"
-            connectNulls={false}
-          />
-          <Line
-            type="monotone"
-            dataKey="predicted"
-            stroke={config.color}
-            strokeWidth={2}
-            strokeDasharray="5 5"
-            dot={{ r: 3 }}
-            name="Predicted"
-            opacity={0.7}
-            connectNulls={false}
-          />
+    <div className="bg-card rounded-xl p-4 border border-border/50">
+      <h4 className="text-sm font-semibold mb-3 text-foreground">
+        {config.label} ({config.unit})
+      </h4>
+      <ResponsiveContainer width="100%" height={220}>
+        <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.4} />
+          <XAxis dataKey="time" tick={{ fontSize: 10 }} interval={5} className="text-muted-foreground" />
+          <YAxis domain={config.domain} tick={{ fontSize: 10 }} className="text-muted-foreground" />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          {splitIdx > 0 && <ReferenceLine x={chartData[splitIdx - 1]?.time} stroke="#6B7280" strokeDasharray="4 4" label={{ value: 'Sekarang', position: 'insideTopRight', fontSize: 9, fill: '#6B7280' }} />}
+          <Line type="monotone" dataKey="actual" stroke={config.color} strokeWidth={2} dot={false} name="Aktual" connectNulls={false} />
+          <Line type="monotone" dataKey="predicted" stroke={config.color} strokeWidth={2} strokeDasharray="6 3" dot={false} name="Prediksi" opacity={0.75} connectNulls={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>
