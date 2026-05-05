@@ -23,54 +23,63 @@ class BMKGService
      */
     public function fetchWeatherData(City $city): ?array
     {
-        $cacheKey = "bmkg_weather_{$city->bmkg_code}";
+        $cacheKey = "openmeteo_weather_{$city->id}";
 
-        // Try to get from cache first
         if ($cached = Cache::get($cacheKey)) {
             return $cached;
         }
 
         try {
-            $response = Http::timeout(30)
-                ->retry(3, 1000)
-                ->get("{$this->baseUrl}?adm4={$city->bmkg_code}");
+            // Fetch past 2 days and next 2 days from Open-Meteo
+            $url = "https://api.open-meteo.com/v1/forecast?latitude={$city->latitude}&longitude={$city->longitude}&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,cloud_cover&past_days=2&forecast_days=2&timezone=Asia%2FJakarta";
+            
+            $response = Http::timeout(30)->retry(3, 1000)->get($url);
 
             if ($response->successful()) {
                 $data = $response->json();
-                
-                // Cache the response
                 Cache::put($cacheKey, $data, $this->cacheTimeout);
-                
                 return $this->transformBMKGData($data);
             }
 
-            Log::error("BMKG API Error for {$city->name}: " . $response->body());
+            Log::error("Weather API Error for {$city->name}: " . $response->body());
             return null;
         } catch (\Exception $e) {
-            Log::error("BMKG API Exception: " . $e->getMessage());
+            Log::error("Weather API Exception: " . $e->getMessage());
             return null;
         }
     }
 
-    /**
-     * Transform BMKG API response to our standard format
-     */
     private function transformBMKGData(array $rawData): array
     {
-        // BMKG API response structure varies, adjust accordingly
         $transformed = [];
         
-        // Example transformation - adjust based on actual BMKG API response
-        if (isset($rawData['data'])) {
-            foreach ($rawData['data'] as $item) {
+        if (isset($rawData['hourly'])) {
+            $times = $rawData['hourly']['time'];
+            $temps = $rawData['hourly']['temperature_2m'];
+            $hums = $rawData['hourly']['relative_humidity_2m'];
+            $winds = $rawData['hourly']['wind_speed_10m'];
+            $clouds = $rawData['hourly']['cloud_cover'];
+
+            foreach ($times as $index => $timeStr) {
+                // Determine condition based on cloud cover and humidity
+                $condition = 'Clear';
+                $cloud = $clouds[$index];
+                $hum = $hums[$index];
+                
+                if ($cloud > 80 && $hum > 85) $condition = 'Heavy Rain';
+                elseif ($cloud > 70 && $hum > 75) $condition = 'Light Rain';
+                elseif ($cloud > 60) $condition = 'Cloudy';
+                elseif ($cloud > 30) $condition = 'Partly Cloudy';
+
                 $transformed[] = [
-                    'temperature' => $item['t'] ?? null,
-                    'humidity' => $item['hu'] ?? null,
-                    'wind_speed' => $item['ws'] ?? null,
-                    'cloud_cover' => $item['tcc'] ?? null,
-                    'weather_condition' => $item['weather_desc'] ?? 'unknown',
-                    'hour' => (int) date('H', strtotime($item['local_datetime'] ?? 'now')),
-                    'day_of_week' => (int) date('w', strtotime($item['local_datetime'] ?? 'now')),
+                    'temperature' => $temps[$index],
+                    'humidity' => $hums[$index],
+                    'wind_speed' => $winds[$index],
+                    'cloud_cover' => $clouds[$index],
+                    'weather_condition' => $condition,
+                    'hour' => (int) date('H', strtotime($timeStr)),
+                    'day_of_week' => (int) date('w', strtotime($timeStr)),
+                    'recorded_at' => $timeStr,
                 ];
             }
         }
@@ -85,18 +94,22 @@ class BMKGService
     {
         try {
             foreach ($data as $weatherItem) {
-                WeatherData::create([
-                    'city_id' => $city->id,
-                    'temperature' => $weatherItem['temperature'],
-                    'humidity' => $weatherItem['humidity'],
-                    'wind_speed' => $weatherItem['wind_speed'],
-                    'cloud_cover' => $weatherItem['cloud_cover'],
-                    'weather_condition' => $weatherItem['weather_condition'],
-                    'hour' => $weatherItem['hour'],
-                    'day_of_week' => $weatherItem['day_of_week'],
-                    'recorded_at' => now(),
-                    'raw_data' => $weatherItem,
-                ]);
+                \App\Models\WeatherData::updateOrCreate(
+                    [
+                        'city_id' => $city->id,
+                        'recorded_at' => \Carbon\Carbon::parse($weatherItem['recorded_at'])->format('Y-m-d H:i:s'),
+                    ],
+                    [
+                        'temperature' => $weatherItem['temperature'],
+                        'humidity' => $weatherItem['humidity'],
+                        'wind_speed' => $weatherItem['wind_speed'],
+                        'cloud_cover' => $weatherItem['cloud_cover'],
+                        'weather_condition' => $weatherItem['weather_condition'],
+                        'hour' => $weatherItem['hour'],
+                        'day_of_week' => $weatherItem['day_of_week'],
+                        'raw_data' => json_encode($weatherItem),
+                    ]
+                );
             }
             return true;
         } catch (\Exception $e) {

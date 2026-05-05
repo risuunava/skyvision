@@ -14,7 +14,7 @@ class MLService
 
     public function __construct()
     {
-        $this->baseUrl = config('services.ml.url', 'http://127.0.0.1:8001');
+        $this->baseUrl = config('services.ml.url', 'http://127.0.0.1:5000');
     }
 
     /**

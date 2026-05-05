@@ -16,45 +16,46 @@ class RunPrediction implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $tries = 2;
-    public $timeout = 600; // 10 minutes
+    public int $tries   = 2;
+    public int $timeout = 600;
 
     public function __construct()
     {
-        $this->onQueue('ml-prediction');
+        // Use 'default' queue so database queue worker picks it up
+        $this->onQueue('default');
     }
 
     public function handle(MLService $mlService, NotificationService $notificationService): void
     {
-        Log::info('Starting prediction job');
-        
+        Log::info('[RunPrediction] Starting ML prediction job');
+
         $cities = City::where('is_active', true)->get();
-        
+
         foreach ($cities as $city) {
-            Log::info("Running prediction for {$city->name}");
-            
-            // Run LSTM prediction
+            Log::info("[RunPrediction] Processing: {$city->name}");
+
+            // LSTM prediction
             $lstmPredictions = $mlService->predict($city, 'lstm');
-            
-            // Run Prophet prediction
-            $prophetPredictions = $mlService->predict($city, 'prophet');
-            
-            // Check risk thresholds
+
+            // Prophet prediction (secondary model)
+            $mlService->predict($city, 'prophet');
+
+            // Check thresholds and notify if high/extreme risk
             if ($lstmPredictions) {
                 $alerts = $mlService->checkRiskThresholds($city, $lstmPredictions);
-                
+
                 if (!empty($alerts)) {
                     $sent = $notificationService->sendCityAlert($city, $alerts);
-                    Log::info("Sent {$sent} notifications for {$city->name}");
+                    Log::info("[RunPrediction] Sent {$sent} notifications for {$city->name}");
                 }
             }
         }
-        
-        Log::info('Prediction job completed');
+
+        Log::info('[RunPrediction] Prediction job completed');
     }
 
     public function failed(\Throwable $exception): void
     {
-        Log::error('Prediction job failed: ' . $exception->getMessage());
+        Log::error('[RunPrediction] Job failed: ' . $exception->getMessage());
     }
 }

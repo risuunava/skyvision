@@ -14,25 +14,33 @@ class FetchWeatherData implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $tries = 3;
-    public $timeout = 300; // 5 minutes
+    public int $tries   = 3;
+    public int $timeout = 300;
 
     public function __construct()
     {
-        $this->onQueue('weather-fetch');
+        // Use 'default' queue so database queue worker picks it up
+        $this->onQueue('default');
     }
 
     public function handle(BMKGService $bmkgService): void
     {
-        Log::info('Starting weather data fetch job');
-        
+        Log::info('[FetchWeatherData] Starting BMKG fetch job');
+
         $results = $bmkgService->fetchAllCities();
-        
-        Log::info('Weather data fetch completed', $results);
+
+        $success = array_filter($results, fn($v) => $v === 'success');
+        $failed  = array_filter($results, fn($v) => $v !== 'success');
+
+        Log::info('[FetchWeatherData] Completed', [
+            'success' => count($success),
+            'failed'  => count($failed),
+            'details' => $results,
+        ]);
     }
 
     public function failed(\Throwable $exception): void
     {
-        Log::error('Weather fetch job failed: ' . $exception->getMessage());
+        Log::error('[FetchWeatherData] Job failed: ' . $exception->getMessage());
     }
 }
