@@ -1,64 +1,56 @@
 # 🌦️ SkyVision – Weather Prediction & Monitoring System
 
-SkyVision adalah sistem berbasis web untuk **monitoring dan prediksi cuaca** yang memanfaatkan data meteorologi serta analisis berbasis machine learning. Sistem ini dirancang untuk memberikan informasi cuaca yang akurat, real-time, dan mudah diakses.
+SkyVision adalah sistem berbasis web terintegrasi untuk **monitoring dan prediksi cuaca** yang memanfaatkan data meteorologi serta analisis berbasis machine learning. Sistem ini dirancang untuk memberikan informasi cuaca yang akurat, real-time, dan mudah diakses sebagai *Early Warning System*.
 
 ---
 
 ## 🚀 Fitur Utama
 
 * 🌍 Manajemen data kota (cities)
-* 🌦️ Penyimpanan dan monitoring data cuaca (weather data)
-* 🤖 Prediksi cuaca berbasis machine learning
-* 🔔 Notifikasi berbasis kondisi cuaca tertentu
-* ⚠️ Pengaturan ambang risiko (risk thresholds)
-* 📊 API backend untuk integrasi frontend (Next.js / lainnya)
+* 🌦️ Penyimpanan dan monitoring data cuaca (weather data) secara real-time
+* 🤖 Prediksi cuaca 24 jam ke depan menggunakan model Machine Learning (LSTM & Prophet)
+* 🔔 Notifikasi peringatan dini (early warning) berbasis kondisi cuaca
+* ⚠️ Pengaturan ambang batas risiko (risk thresholds) kustom
+* 📊 Dashboard monitoring interaktif dan dinamis
 
 ---
 
 ## 🛠️ Tech Stack
 
-**Backend:**
-
+**Backend (REST API):**
 * Laravel 12
 * PostgreSQL (Supabase)
 
-**Frontend (opsional):**
+**Frontend (Dashboard):**
+* Next.js 16 (React)
+* Tailwind CSS & Shadcn UI
 
-* Next.js
-
-**Machine Learning Service**
-
-* Python (Flask / FastAPI)
+**Machine Learning Service:**
+* Python (FastAPI)
+* TensorFlow / Keras (LSTM Model)
+* Prophet (Time Series Forecasting)
 
 ---
 
-## ⚙️ Instalasi
+## ⚙️ Instalasi & Menjalankan Aplikasi
 
-### 1. Clone repository
+Sistem ini memiliki arsitektur *microservices* dan terdiri dari 3 layanan utama yang harus dijalankan: Backend, Frontend, dan ML Service.
 
+### 1. Clone Repository
 ```bash
 git clone https://github.com/username/skyvision.git
-cd skyvision/backend
+cd skyvision
 ```
 
-### 2. Install dependency
-
+### 2. Setup Backend (Laravel)
 ```bash
+cd backend
 composer install
-```
-
-### 3. Setup environment
-
-```bash
 cp .env.example .env
 php artisan key:generate
 ```
-
-### 4. Konfigurasi database (Supabase)
-
-Sesuaikan `.env`:
-
-```
+Konfigurasi koneksi database (Supabase) di file `.env`:
+```env
 DB_CONNECTION=pgsql
 DB_HOST=your-supabase-host
 DB_PORT=5432
@@ -66,89 +58,87 @@ DB_DATABASE=postgres
 DB_USERNAME=your-username
 DB_PASSWORD=your-password
 ```
-
-### 5. Migrasi database
-
+Jalankan migrasi database dan server backend:
 ```bash
 php artisan migrate
-```
-
-### 6. Jalankan server
-
-```bash
 php artisan serve
 ```
+*(Buka tab terminal baru untuk langkah selanjutnya)*
+
+### 3. Setup Machine Learning Service (Python FastAPI)
+```bash
+cd ../ml-service
+python -m venv venv
+
+# Aktivasi virtual environment (Windows):
+venv\Scripts\activate
+# Aktivasi virtual environment (Mac/Linux):
+source venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 5000 --reload
+```
+*(Buka tab terminal baru untuk langkah selanjutnya)*
+
+### 4. Setup Frontend (Next.js)
+```bash
+cd ../frontend
+npm install
+npm run dev
+```
+
+Aplikasi Dashboard SkyVision sekarang dapat diakses melalui browser di `http://localhost:3000`.
 
 ---
 
 ## 📁 Struktur Database (Ringkas)
 
-* `cities` → data kota
-* `weather_data` → data cuaca
-* `predictions` → hasil prediksi ML
-* `subscriptions` → langganan notifikasi user
-* `risk_thresholds` → ambang batas risiko
-* `notifications` → notifikasi sistem
+* `cities` → Data lokasi/kota yang dimonitor
+* `weather_data` → Riwayat data cuaca aktual 
+* `predictions` → Hasil prediksi cuaca dari model Machine Learning
+* `subscriptions` → Langganan notifikasi pengguna
+* `risk_thresholds` → Konfigurasi ambang batas penentuan risiko cuaca (extreme/high)
+* `notifications` → Riwayat notifikasi sistem peringatan dini
 
 ---
 
-## 🔗 API Endpoint (Contoh)
+## ⚠️ Sumber Data
 
-| Method | Endpoint     | Deskripsi        |
-| ------ | ------------ | ---------------- |
-| GET    | /api/weather | Ambil data cuaca |
-| POST   | /api/predict | Prediksi cuaca   |
-| GET    | /api/cities  | List kota        |
+Saat ini, aplikasi SkyVision mengambil data cuaca secara real-time menggunakan **Open-Meteo API** untuk menjamin stabilitas *endpoint* publik, meskipun arsitekturnya (seperti pada kelas `BMKGService`) sudah didesain agar kompatibel dengan data Badan Meteorologi, Klimatologi, dan Geofisika (BMKG).
 
----
-
-## ⚠️ Perhatian (WAJIB)
-
-Aplikasi ini menggunakan data dari:
-
-**Badan Meteorologi, Klimatologi, dan Geofisika (BMKG)**
-
-➡️ **Wajib mencantumkan BMKG sebagai sumber data** pada:
-
-* Tampilan aplikasi (UI)
-* Dashboard
-* Halaman informasi / footer
-
-Contoh atribusi:
-
-```
-Sumber data: BMKG (Badan Meteorologi, Klimatologi, dan Geofisika)
-```
+➡️ **Atribusi / Attribution Wajib:**
+* **Open-Meteo API** sebagai sumber penyedia data cuaca aktual dan historis.
+* Apabila di kemudian hari menggunakan kembali API publik BMKG, maka wajib mencantumkan **BMKG (Badan Meteorologi, Klimatologi, dan Geofisika)** pada dashboard / aplikasi sebagai sumber data resmi.
 
 ---
 
 ## 📌 Catatan Pengembangan
 
-* Pastikan urutan migration benar (relasi foreign key)
-* Gunakan `php artisan migrate:fresh` saat development
-* Gunakan standar commit (Conventional Commits)
+* Pastikan **Scheduler** Laravel (`php artisan schedule:work`) berjalan di background agar tugas pengambilan data cuaca rutin dan eksekusi otomatis model ML (cron job) dapat berjalan sesuai interval yang ditentukan (1 jam / 6 jam).
+* Gunakan perintah `php artisan migrate:fresh` dengan sangat hati-hati (hanya saat proses *development*), karena akan menghapus seluruh data pada tabel.
+* Gunakan standar penulisan *commit* (Conventional Commits) jika ingin berkontribusi.
 
 ---
 
 ## 🤝 Kontribusi
 
-Pull request dipersilakan. Untuk perubahan besar, silakan diskusikan terlebih dahulu.
+*Pull request* sangat dipersilakan. Untuk perubahan skala besar atau penambahan fitur yang signifikan, silakan buka *Issues* dan diskusikan terlebih dahulu dengan *author*.
 
 ---
 
 ## 📄 Lisensi
 
-Project ini digunakan untuk keperluan:
+Project ini dibuat dan digunakan untuk keperluan:
 
-* Skripsi
-* Pembelajaran
-* Pengembangan sistem informasi cuaca
+* Skripsi / Tugas Akhir
+* Pembelajaran dan Riset Akademik
+* Pengembangan purwarupa Sistem Informasi & *Early Warning System* Cuaca
 
 ---
 
 ## 👨‍💻 Author
 
-Muhammad Lazuardi Al-Farisi
+**Muhammad Lazuardi Al-Farisi**  
 Informatika – Universitas Sebelas April
 
 ---
