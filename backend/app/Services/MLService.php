@@ -24,6 +24,7 @@ class MLService
     {
         $weatherData = WeatherData::where('city_id', $city->id)
             ->where('recorded_at', '>=', now()->subHours(24))
+            ->where('recorded_at', '<=', now()) // Jangan ambil data ramalan masa depan
             ->orderBy('recorded_at', 'asc')
             ->get();
 
@@ -108,11 +109,17 @@ class MLService
      */
     private function storePredictions(City $city, string $modelType, array $predictions): void
     {
+        // Hapus prediksi lama di masa depan agar tidak menumpuk dan nyangkut (stuck)
+        Prediction::where('city_id', $city->id)
+            ->where('model_type', $modelType)
+            ->where('prediction_time', '>=', now()->subHours(1))
+            ->delete();
+
         foreach ($predictions['predictions'] as $prediction) {
             Prediction::create([
                 'city_id' => $city->id,
                 'model_type' => $modelType,
-                'prediction_time' => $prediction['timestamp'],
+                'prediction_time' => \Carbon\Carbon::parse($prediction['timestamp'])->format('Y-m-d H:i:s'),
                 'predicted_temperature' => $prediction['temperature'],
                 'predicted_humidity' => $prediction['humidity'],
                 'predicted_wind_speed' => $prediction['wind_speed'],
